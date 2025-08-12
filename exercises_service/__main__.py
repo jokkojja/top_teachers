@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 
-from environment import ApiConfig
+from api.config import ApiConfig
 from api.rest.app import app
 
 
@@ -18,7 +18,12 @@ def run_api(app: FastAPI) -> None:
     server.run()
 
 
+def generate_admin() -> None:
+    pass
+
+
 def main() -> None:
+    generate_admin()
     run_api(app)
 
 

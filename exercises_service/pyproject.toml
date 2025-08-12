@@ -8,10 +8,11 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = "^0.116.1"
-psycopg2 = "^2.9.10"
 uvicorn = "^0.35.0"
 loguru = "^0.7.3"
 python-dotenv = "^1.1.1"
+alembic = "^1.16.4"
+psycopg2 = "^2.9.10"
 
 
 [build-system]
