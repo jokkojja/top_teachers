@@ -7,13 +7,13 @@ from starlette.middleware.cors import CORSMiddleware
 from app_globals import AppGlobals
 
 
-# @asynccontextmanager
-# async def handle_api_startup(app: FastAPI):
-#     globals = await AppGlobals.create()
-#     app.state.globals = globals
-#
-#     yield
-#
+@asynccontextmanager
+async def handle_api_startup(app: FastAPI):
+    globals = await AppGlobals.create()
+    app.state.globals = globals
+
+    yield
+
 
 middleware = [
     Middleware(
@@ -25,6 +25,6 @@ middleware = [
 ]
 
 app = FastAPI(
-    # lifespan=handle_api_startup,
+    lifespan=handle_api_startup,
     middleware=middleware,
 )

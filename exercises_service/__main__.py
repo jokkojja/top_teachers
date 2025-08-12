@@ -3,10 +3,11 @@ from fastapi import FastAPI
 
 from api.config import ApiConfig
 from api.rest.app import app
+from api.rest.users import user_router
 
 
 def run_api(app: FastAPI) -> None:
-    routers = []
+    routers = [user_router]
     for router in routers:
         app.include_router(router)
 

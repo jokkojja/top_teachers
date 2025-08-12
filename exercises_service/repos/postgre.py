@@ -5,6 +5,7 @@ from psycopg2.extensions import cursor as PsycopgCursor
 from psycopg2.pool import ThreadedConnectionPool
 
 from repos.config import PostgreConfig
+from repos.models.user import Users
 from repos.repo import Repo
 
 
@@ -36,6 +37,16 @@ class Postgre(Repo):
     def from_env(cls) -> Self:
         config = PostgreConfig.from_env()
         return cls(config)
+
+    def get_users(self) -> Users:
+        with self.conn() as conn:
+            conn.execute(
+                "SELECT u.name, r.role from users as u join roles as r on u.role_id = r.id"
+            )
+            users = conn.fetchall()
+
+            print(users)
+            return Users(*users)
 
     def create_exercise(self):
         with self.conn() as conn:
