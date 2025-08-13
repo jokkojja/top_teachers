@@ -24,7 +24,7 @@ def upgrade():
             id SERIAL PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
             role_id INTEGER NOT NULL REFERENCES roles(id),
-            token BYTEA NOT NULL,
+            token VARCHAR(64) NOT NULL,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 
         );
@@ -32,4 +32,4 @@ def upgrade():
 
 
 def downgrade():
-    op.execute("DROP TABLE users;")
+    op.execute("DROP TABLE users CASCADE;")

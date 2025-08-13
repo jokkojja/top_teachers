@@ -1,15 +1,17 @@
 from dataclasses import dataclass
-from typing import TypedDict
-
-from api.models.roles import Role
+from typing import Iterator
 
 
 @dataclass(frozen=True)
 class User:
     name: str
-    role: Role
+    role: str
+    hash: str
 
 
 @dataclass(frozen=True)
 class Users:
     users: list[User]
+
+    def __iter__(self) -> Iterator[User]:
+        return iter(self.users)
