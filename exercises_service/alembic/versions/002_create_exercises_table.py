@@ -27,7 +27,7 @@ def upgrade():
             author_id INTEGER NOT NULL REFERENCES users(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE,
-            uuid BYTEA NOT NULL
+            uuid UUID NOT NULL DEFAULT gen_random_uuid()
 
         );
     """)

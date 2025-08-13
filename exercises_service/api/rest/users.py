@@ -1,5 +1,4 @@
-from api.models.user import User
-from api.models.user import Users
+from api.models.user import UserCreate, Users, UserResponse
 from app_globals import DatabaseSession
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, Response
@@ -25,8 +24,10 @@ def get_users(
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     return Users(
-        users=[User(name=user.name, role=user.role, hash=user.hash)
-               for user in users]
+        users=[
+            UserResponse(name=user.name, role=user.role, hash=user.hash)
+            for user in users
+        ]
     )
 
 
@@ -34,16 +35,16 @@ def get_users(
 def get_user(
     user_id: int,
     database_session: DatabaseSession = Depends(get_database_session),
-) -> User:
+) -> UserResponse:
     user = database_session.postgres.get_user(user_id)
     if user is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
-    return User(name=user.name, role=user.role, hash=user.hash)
+    return UserResponse(name=user.name, role=user.role, hash=user.hash)
 
 
 @user_router.put("/")
 def create_user(
-    user: User, database_session: DatabaseSession = Depends(get_database_session)
+    user: UserCreate, database_session: DatabaseSession = Depends(get_database_session)
 ) -> JSONResponse:
     user_id = database_session.postgres.create_user(user.name, user.role.value)
 
