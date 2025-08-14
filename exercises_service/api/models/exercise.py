@@ -15,7 +15,7 @@ class ExerciseResponse(BaseModel):
     text: str
     author_id: int
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: Optional[datetime]
     uuid: str
 
 
