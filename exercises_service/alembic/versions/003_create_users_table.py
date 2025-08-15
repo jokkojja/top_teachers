@@ -25,8 +25,8 @@ def upgrade():
             name VARCHAR(100) NOT NULL,
             role_id INTEGER NOT NULL REFERENCES roles(id),
             token VARCHAR(64) NOT NULL,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            uuid UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()
         );
     """)
 

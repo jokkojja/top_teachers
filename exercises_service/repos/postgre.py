@@ -3,30 +3,33 @@ from datetime import datetime
 import hashlib
 import secrets
 import string
-from typing import ClassVar, Iterator, Self
+from typing import Final, Iterator, Self
 
 from psycopg2.extensions import cursor as PsycopgCursor
 from psycopg2.pool import ThreadedConnectionPool
 from psycopg2.errors import ForeignKeyViolation
 
 from repos.config import PostgreConfig
+from repos.controllers import ExercisesController, UserController
 from repos.models.user import User, Users
 from repos.models.exercise import Exercise
 from repos.repo import Repo
 
 
-def generate_token(name: str, role: str) -> str:
+def generate_token(encode_string: str) -> str:
     salt = "".join(
         secrets.choice(string.ascii_letters + string.digits) for _ in range(16)
     )
-    raw = f"{name}{role}{salt}".encode()
+    raw = f"{encode_string}{salt}".encode()
     return hashlib.sha256(raw).hexdigest()
 
 
 class Postgre(Repo):
-    __exercise_table: ClassVar[str] = "exercises"
-    __roles_table: ClassVar[str] = "roles"
-    __users_table: ClassVar[str] = "users"
+    _EXERCISE_TABLE: Final[str] = "exercises"
+    _ROLES_TABLE: Final[str] = "roles"
+    _USERS_TABLE: Final[str] = "users"
+    _CADIDATES_TABLE: Final[str] = "candidates"
+    _ASSIGMENTS_TABLE: Final[str] = "assignments"
 
     def __init__(
         self,
@@ -39,7 +42,7 @@ class Postgre(Repo):
         )
 
     @contextmanager
-    def conn(self) -> Iterator[PsycopgCursor]:
+    def _conn(self) -> Iterator[PsycopgCursor]:
         conn = self.__pool.getconn()
         try:
             with conn:
@@ -56,35 +59,20 @@ class Postgre(Repo):
         config = PostgreConfig.from_env()
         return cls(config)
 
-    def get_users(self) -> Users:
-        with self.conn() as conn:
-            conn.execute(
-                f"""SELECT u.name, r.role, u.token from {
-                    self.__users_table
-                } as u join roles as r on u.role_id = r.id"""
-            )
-            users = conn.fetchall()
-            return Users(
-                users=[User(name=user[0], role=user[1], hash=user[2]) for user in users]
-            )
 
-    def get_user(self, user_id: int) -> User | None:
-        with self.conn() as conn:
-            conn.execute(
-                f"""SELECT u.name, r.role, u.token from {
-                    self.__users_table
-                } as u join roles as r on u.role_id = r.id where u.id=%s""",
-                (user_id,),
-            )
-            user = conn.fetchone()
-            if user is None:
-                return
-            return User(name=user[0], role=user[1], hash=user[2])
+class PostgreExercisesController(ExercisesController):
+    def __init__(self, config: PostgreConfig) -> None:
+        self.repo = Postgre(config=config)
+
+    @classmethod
+    def from_env(cls) -> Self:
+        config = PostgreConfig.from_env()
+        return cls(config)
 
     def create_exercise(self, title: str, text: str, author_id: int) -> int | None:
-        with self.conn() as conn:
+        with self.repo._conn() as conn:
             insert_query = f"""
-                INSERT INTO {self.__exercise_table} (title, text, author_id)
+                INSERT INTO {self.repo._EXERCISE_TABLE} (title, text, author_id)
                 VALUES (%s, %s, %s)
                 RETURNING id
             """
@@ -100,10 +88,10 @@ class Postgre(Repo):
             return exercise_id
 
     def get_exercise(self, exercise_id: int) -> Exercise | None:
-        with self.conn() as conn:
+        with self.repo._conn() as conn:
             conn.execute(
                 f"""SELECT id, title, text, author_id, uuid, created_at, updated_at from {
-                    self.__exercise_table
+                    self.repo._EXERCISE_TABLE
                 } where id=%s""",
                 (exercise_id,),
             )
@@ -123,10 +111,10 @@ class Postgre(Repo):
     def update_exercise(
         self, exercise_id: int, text: str, updated_at: datetime
     ) -> bool:
-        with self.conn() as conn:
+        with self.repo._conn() as conn:
             conn.execute(
                 f"""UPDATE {
-                    self.__exercise_table
+                    self.repo._EXERCISE_TABLE
                 } SET text=%s, updated_at=%s where id=%s RETURNING id""",
                 (
                     text,
@@ -136,20 +124,57 @@ class Postgre(Repo):
             )
             return conn.fetchone() is not None
 
+
+class PostgreUserContoller(UserController):
+    def __init__(self, config: PostgreConfig) -> None:
+        self.repo = Postgre(config=config)
+
+    @classmethod
+    def from_env(cls) -> Self:
+        config = PostgreConfig.from_env()
+        return cls(config)
+
+    def get_users(self) -> Users:
+        with self.repo._conn() as conn:
+            conn.execute(
+                f"""SELECT u.name, r.role, u.token from {
+                    self.repo._USERS_TABLE
+                } as u join roles as r on u.role_id = r.id"""
+            )
+            users = conn.fetchall()
+            return Users(
+                users=[User(name=user[0], role=user[1], hash=user[2]) for user in users]
+            )
+
+    def get_user(self, user_id: int) -> User | None:
+        with self.repo._conn() as conn:
+            conn.execute(
+                f"""SELECT u.name, r.role, u.token from {
+                    self.repo._USERS_TABLE
+                } as u join roles as r on u.role_id = r.id where u.id=%s""",
+                (user_id,),
+            )
+            user = conn.fetchone()
+            if user is None:
+                return
+            return User(name=user[0], role=user[1], hash=user[2])
+
     def create_user(self, name: str, role: str) -> int:
-        with self.conn() as conn:
-            get_role_query = f"""SELECT id FROM {self.__roles_table} WHERE role = %s"""
+        with self.repo._conn() as conn:
+            get_role_query = (
+                f"""SELECT id FROM {self.repo._ROLES_TABLE} WHERE role = %s"""
+            )
             conn.execute(get_role_query, (role,))
             role_data = conn.fetchone()
             role_id = role_data[0]
 
             insert_query = f"""
-                INSERT INTO {self.__users_table} (name, role_id, token)
+                INSERT INTO {self.repo._USERS_TABLE} (name, role_id, token)
                 VALUES (%s, %s, %s)
                 RETURNING id
             """
-
-            token = generate_token(name, role)
+            encode_string = f"{name}{role}"
+            token = generate_token(encode_string)
             conn.execute(
                 insert_query,
                 (name, role_id, token),
