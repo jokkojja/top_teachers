@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Self
 
-from repos.postgre import Postgre, PostgreExercisesController, PostgreUserContoller
+from repos.postgre import PostgreExercisesController, PostgreUserContoller
 
 
 @dataclass(frozen=True)

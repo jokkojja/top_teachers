@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade():
     op.execute("""
-        CREATE TABLE assignment  (
+        CREATE TABLE assignments  (
             id SERIAL PRIMARY KEY,
             candidate_uuid UUID NOT NULL REFERENCES candidates(uuid),
             exercise_uuid UUID NOT NULL REFERENCES exercises(uuid)

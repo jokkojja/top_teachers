@@ -4,6 +4,7 @@ import hashlib
 import secrets
 import string
 from typing import Final, Iterator, Self
+from uuid import UUID
 
 from psycopg2.extensions import cursor as PsycopgCursor
 from psycopg2.pool import ThreadedConnectionPool
@@ -123,6 +124,18 @@ class PostgreExercisesController(ExercisesController):
                 ),
             )
             return conn.fetchone() is not None
+
+    def assign_exercise(self, candidate_uuid: UUID, exercise_uuid: UUID) -> bool:
+        with self.repo._conn() as conn:
+            try:
+                conn.execute(
+                    f"""INSERT INTO {self.repo._ASSIGMENTS_TABLE} (candidate_uuid,exercise_uuid) VALUES (%s, %s)""",
+                    (str(candidate_uuid), str(exercise_uuid)),
+                )
+            except ForeignKeyViolation:
+                return False
+
+            return True
 
 
 class PostgreUserContoller(UserController):

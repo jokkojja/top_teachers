@@ -1,9 +1,19 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+from contextlib import contextmanager
+from typing import Iterator, Self
 
 
 class Repo(ABC):
-    def create_exercise(self):
+    @abstractmethod
+    @contextmanager
+    def _conn(self) -> Iterator:
         raise NotImplementedError
 
-    def update_exercise(self):
+    @abstractmethod
+    def close(self) -> None:
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def from_env(cls) -> Self:
         raise NotImplementedError
