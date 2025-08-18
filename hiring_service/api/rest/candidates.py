@@ -46,6 +46,7 @@ def create_candidate(
     candidate: CandidateCreate,
     database_controllers: PostgreControllers = Depends(get_database_controllers),
 ) -> JSONResponse:
+    # Cross service comm. Data replication to exercises service
     candidate_id = database_controllers.candidate_controller.create_candidate(
         candidate.name, candidate.email
     )
