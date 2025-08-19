@@ -29,4 +29,4 @@ def upgrade():
 
 
 def downgrade():
-    op.execute("DROP TABLE assignment CASCADE;")
+    op.execute("DROP TABLE assignments CASCADE;")

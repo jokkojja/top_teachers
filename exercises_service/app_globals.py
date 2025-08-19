@@ -34,6 +34,10 @@ class KafkaControllers:
         await self.producer.start()
         await self.consumer.start()
 
+    async def shutdown(self) -> None:
+        await self.producer.stop()
+        await self.consumer.stop()
+
 
 @dataclass(frozen=True)
 class AppGlobals:
@@ -48,3 +52,6 @@ class AppGlobals:
         await kafka_controllers.start()
 
         return cls(database_session, kafka_controllers)
+
+    async def shutdown(self) -> None:
+        await self.kafka_controllers.shutdown()

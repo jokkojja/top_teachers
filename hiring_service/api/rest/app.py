@@ -14,6 +14,8 @@ async def handle_api_startup(app: FastAPI):
 
     yield
 
+    await app.state.globals.shutdown()
+
 
 middleware = [
     Middleware(

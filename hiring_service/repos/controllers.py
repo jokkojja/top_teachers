@@ -13,5 +13,5 @@ class CandidateController(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def create_candidate(self, name: str, email: str) -> int:
+    def create_candidate(self, name: str, email: str) -> str | None:
         raise NotImplementedError

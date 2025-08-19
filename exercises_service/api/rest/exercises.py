@@ -4,7 +4,6 @@ import uuid
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, Response
-from kafka.producer import KafkaProducerService
 from loguru import logger
 from starlette.status import (
     HTTP_201_CREATED,
@@ -16,6 +15,7 @@ from starlette.status import (
 from api.models.exercise import ExerciseCreate, ExerciseResponse, ExerciseUpdate
 from api.rest.dependencies import get_database_controllers, get_kafka_producer
 from app_globals import PostgreControllers
+from kafka.producer import KafkaProducerService
 
 exercise_router = APIRouter(prefix="/api/v1/exercise")
 

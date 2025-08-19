@@ -93,12 +93,12 @@ class PostgreCandidateController(CandidateController):
                 email=exercise[1],
             )
 
-    def create_candidate(self, name: str, email: str) -> int:
+    def create_candidate(self, name: str, email: str) -> str | None:
         with self.repo._conn() as conn:
             insert_query = f"""
                 INSERT INTO {self.repo._CANDIDATES_TABLE} (name, email)
                 VALUES (%s, %s)
-                RETURNING id
+                RETURNING uuid
             """
             conn.execute(
                 insert_query,
@@ -108,5 +108,8 @@ class PostgreCandidateController(CandidateController):
                 ),
             )
 
-            exercise_id = conn.fetchone()[0]
-            return exercise_id
+            candidate = conn.fetchone()
+            if candidate is None:
+                return
+
+            return candidate[0]
