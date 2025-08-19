@@ -5,6 +5,12 @@ from repos.models.exercise import Exercise
 from repos.models.user import User, Users
 
 
+class CandidateController(ABC):
+    @abstractmethod
+    def create_candidate(self, candidate_uuid: str) -> int:
+        raise NotImplementedError
+
+
 class UserController(ABC):
     @abstractmethod
     def get_users(self) -> Users:

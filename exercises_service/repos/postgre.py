@@ -8,7 +8,7 @@ from psycopg2.pool import ThreadedConnectionPool
 from psycopg2.errors import ForeignKeyViolation
 
 from repos.config import PostgreConfig
-from repos.controllers import ExercisesController, UserController
+from repos.controllers import CandidateController, ExercisesController, UserController
 from repos.models.user import User, Users
 from repos.models.exercise import Exercise
 from repos.repo import Repo
@@ -181,6 +181,30 @@ class PostgreUserContoller(UserController):
             conn.execute(
                 insert_query,
                 (name, role_id),
+            )
+            user_id = conn.fetchone()[0]
+            return user_id
+
+
+class PostgreCandidateController(CandidateController):
+    def __init__(self, config: PostgreConfig) -> None:
+        self.repo = Postgre(config=config)
+
+    @classmethod
+    def from_env(cls) -> Self:
+        config = PostgreConfig.from_env()
+        return cls(config)
+
+    def create_candidate(self, candidate_uuid: str) -> int:
+        with self.repo._conn() as conn:
+            insert_query = f"""
+                INSERT INTO {self.repo._CADIDATES_TABLE} (uuid)
+                VALUES (%s)
+                RETURNING id
+            """
+            conn.execute(
+                insert_query,
+                (candidate_uuid,),
             )
             user_id = conn.fetchone()[0]
             return user_id

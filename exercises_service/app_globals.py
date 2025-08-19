@@ -3,19 +3,25 @@ from typing import Self
 
 from kafka.consumer import KafkaConsumerService
 from kafka.producer import KafkaProducerService
-from repos.postgre import PostgreExercisesController, PostgreUserContoller
+from repos.postgre import (
+    PostgreExercisesController,
+    PostgreUserContoller,
+    PostgreCandidateController,
+)
 
 
 @dataclass(frozen=True)
 class PostgreControllers:
     users_controller: PostgreUserContoller
     exercises_controller: PostgreExercisesController
+    candidate_controller: PostgreCandidateController
 
     @classmethod
     def from_env(cls) -> Self:
         users_controller = PostgreUserContoller.from_env()
         exercises_controller = PostgreExercisesController.from_env()
-        return cls(users_controller, exercises_controller)
+        candidate_controller = PostgreCandidateController.from_env()
+        return cls(users_controller, exercises_controller, candidate_controller)
 
 
 @dataclass(frozen=True)
