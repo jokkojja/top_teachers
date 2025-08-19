@@ -23,12 +23,7 @@ def get_users(
     if len(users.users) == 0:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
-    return Users(
-        users=[
-            UserResponse(name=user.name, role=user.role, hash=user.hash)
-            for user in users
-        ]
-    )
+    return Users(users=[UserResponse(name=user.name, role=user.role) for user in users])
 
 
 @user_router.get("/{user_id}")
@@ -39,7 +34,7 @@ def get_user(
     user = database_controllers.users_controller.get_user(user_id)
     if user is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
-    return UserResponse(name=user.name, role=user.role, hash=user.hash)
+    return UserResponse(name=user.name, role=user.role)
 
 
 @user_router.put("/")

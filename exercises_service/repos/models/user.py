@@ -6,7 +6,6 @@ from typing import Iterator
 class User:
     name: str
     role: str
-    hash: str
 
 
 @dataclass(frozen=True)

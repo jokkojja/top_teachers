@@ -1,8 +1,5 @@
 from contextlib import contextmanager
 from datetime import datetime
-import hashlib
-import secrets
-import string
 from typing import Final, Iterator, Self
 from uuid import UUID
 
@@ -15,14 +12,6 @@ from repos.controllers import ExercisesController, UserController
 from repos.models.user import User, Users
 from repos.models.exercise import Exercise
 from repos.repo import Repo
-
-
-def generate_token(encode_string: str) -> str:
-    salt = "".join(
-        secrets.choice(string.ascii_letters + string.digits) for _ in range(16)
-    )
-    raw = f"{encode_string}{salt}".encode()
-    return hashlib.sha256(raw).hexdigest()
 
 
 class Postgre(Repo):
@@ -155,19 +144,17 @@ class PostgreUserContoller(UserController):
     def get_users(self) -> Users:
         with self.repo._conn() as conn:
             conn.execute(
-                f"""SELECT u.name, r.role, u.token from {
+                f"""SELECT u.name, r.role from {
                     self.repo._USERS_TABLE
                 } as u join roles as r on u.role_id = r.id"""
             )
             users = conn.fetchall()
-            return Users(
-                users=[User(name=user[0], role=user[1], hash=user[2]) for user in users]
-            )
+            return Users(users=[User(name=user[0], role=user[1]) for user in users])
 
     def get_user(self, user_id: int) -> User | None:
         with self.repo._conn() as conn:
             conn.execute(
-                f"""SELECT u.name, r.role, u.token from {
+                f"""SELECT u.name, r.role from {
                     self.repo._USERS_TABLE
                 } as u join roles as r on u.role_id = r.id where u.id=%s""",
                 (user_id,),
@@ -175,7 +162,7 @@ class PostgreUserContoller(UserController):
             user = conn.fetchone()
             if user is None:
                 return
-            return User(name=user[0], role=user[1], hash=user[2])
+            return User(name=user[0], role=user[1])
 
     def create_user(self, name: str, role: str) -> int:
         with self.repo._conn() as conn:
@@ -187,15 +174,13 @@ class PostgreUserContoller(UserController):
             role_id = role_data[0]
 
             insert_query = f"""
-                INSERT INTO {self.repo._USERS_TABLE} (name, role_id, token)
-                VALUES (%s, %s, %s)
+                INSERT INTO {self.repo._USERS_TABLE} (name, role_id)
+                VALUES (%s, %s)
                 RETURNING id
             """
-            encode_string = f"{name}{role}"
-            token = generate_token(encode_string)
             conn.execute(
                 insert_query,
-                (name, role_id, token),
+                (name, role_id),
             )
             user_id = conn.fetchone()[0]
             return user_id

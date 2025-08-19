@@ -20,12 +20,7 @@ def run_api(app: FastAPI) -> None:
     server.run()
 
 
-def generate_admin() -> None:
-    pass
-
-
 def main() -> None:
-    generate_admin()
     run_api(app)
 
 

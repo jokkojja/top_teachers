@@ -28,7 +28,7 @@ def upgrade() -> None:
 
     op.execute("""
         INSERT INTO roles (role)
-        VALUES ('manager'), ('admin')
+        VALUES ('manager')
         ON CONFLICT (role) DO NOTHING;
     """)
 
