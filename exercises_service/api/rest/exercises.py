@@ -1,6 +1,11 @@
+from datetime import datetime, UTC
+import enum
+import uuid
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, Response
-from uuid import UUID
+from kafka.producer import KafkaProducerService
+from loguru import logger
 from starlette.status import (
     HTTP_201_CREATED,
     HTTP_204_NO_CONTENT,
@@ -9,11 +14,35 @@ from starlette.status import (
 )
 
 from api.models.exercise import ExerciseCreate, ExerciseResponse, ExerciseUpdate
-from api.rest.dependencies import get_database_controllers
+from api.rest.dependencies import get_database_controllers, get_kafka_producer
 from app_globals import PostgreControllers
 
-
 exercise_router = APIRouter(prefix="/api/v1/exercise")
+
+
+@enum.unique
+class EventType(enum.StrEnum):
+    EXERCISE_CREATED = "ExerciseCreated"
+    EXERCISE_UPDATED = "ExerciseUpdated"
+
+
+async def publish_exercise(
+    exercise_uuid: str,
+    producer: KafkaProducerService,
+    event_type: EventType,
+):
+    topic = "data_replication.exercises"
+    event = {
+        "event_id": str(uuid.uuid4()),
+        "event_type": event_type,
+        "timestamp": datetime.now(UTC).isoformat(),
+        "payload": {
+            "exercise_uuid": exercise_uuid,
+        },
+    }
+    await producer.send(topic, event)
+
+    logger.info(f"Send event {event} to kafka topic {topic}")
 
 
 @exercise_router.get("/{exercise_id}")
@@ -37,42 +66,47 @@ def get_exercise(
 
 
 @exercise_router.put("/")
-def create_exercise(
+async def create_exercise(
     exercise: ExerciseCreate,
     database_controllers: PostgreControllers = Depends(get_database_controllers),
+    producer: KafkaProducerService = Depends(get_kafka_producer),
 ) -> JSONResponse:
-    # Formal comm. Streaming exercise to hiring service
-    exercise_id = database_controllers.exercises_controller.create_exercise(
+    # Formal comm. Streaming exercise to hiring service. Topic: data_replication.exercises
+    exercise_uuid = database_controllers.exercises_controller.create_exercise(
         title=exercise.title, text=exercise.text, author_id=exercise.author_id
     )
-    if exercise_id is None:
+    if exercise_uuid is None:
         return JSONResponse(
             status_code=HTTP_400_BAD_REQUEST,
             content="Author with provided ID does not exist",
         )
 
+    await publish_exercise(exercise_uuid, producer, EventType.EXERCISE_CREATED)
+
     return JSONResponse(
         status_code=HTTP_201_CREATED,
-        content=f"""Exercise was created with id {exercise_id}""",
+        content="Exercise was created",
     )
 
 
 @exercise_router.patch("/{exercise_id}")
-def update_exercise(
+async def update_exercise(
     exercise_id: int,
     exercise: ExerciseUpdate,
     database_controllers: PostgreControllers = Depends(get_database_controllers),
+    producer: KafkaProducerService = Depends(get_kafka_producer),
 ) -> JSONResponse:
-    # Formal comm. Streaming exercise to hiring service
-    is_updated = database_controllers.exercises_controller.update_exercise(
+    # Formal comm. Streaming exercise to hiring service. Topic: data_replication.exercises
+    exercise_uuid = database_controllers.exercises_controller.update_exercise(
         exercise_id=exercise_id, text=exercise.text, updated_at=exercise.updated_at
     )
-    if not is_updated:
+    if exercise_uuid is None:
         return JSONResponse(
             status_code=HTTP_400_BAD_REQUEST,
             content="Exercise with provided ID does not exist",
         )
 
+    await publish_exercise(exercise_uuid, producer, EventType.EXERCISE_UPDATED)
     return JSONResponse(
         status_code=HTTP_200_OK,
         content=f"Exercise with id {exercise_id} was updated",
@@ -81,11 +115,11 @@ def update_exercise(
 
 @exercise_router.post("/")
 def assign_exercise(
-    candidate_uuid: UUID,
-    exercise_uuid: UUID,
+    candidate_uuid: uuid.UUID,
+    exercise_uuid: uuid.UUID,
     database_controllers: PostgreControllers = Depends(get_database_controllers),
 ):
-    # Func comm. Buisisness event to hiring service
+    # Func comm. Buisisness event to hiring service. Topic: domain.homework
     is_assigned = database_controllers.exercises_controller.assign_exercise(
         candidate_uuid, exercise_uuid
     )

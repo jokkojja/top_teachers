@@ -70,12 +70,12 @@ class PostgreExercisesController(ExercisesController):
         config = PostgreConfig.from_env()
         return cls(config)
 
-    def create_exercise(self, title: str, text: str, author_id: int) -> int | None:
+    def create_exercise(self, title: str, text: str, author_id: int) -> str | None:
         with self.repo._conn() as conn:
             insert_query = f"""
                 INSERT INTO {self.repo._EXERCISE_TABLE} (title, text, author_id)
                 VALUES (%s, %s, %s)
-                RETURNING id
+                RETURNING uuid
             """
             try:
                 conn.execute(
@@ -111,19 +111,24 @@ class PostgreExercisesController(ExercisesController):
 
     def update_exercise(
         self, exercise_id: int, text: str, updated_at: datetime
-    ) -> bool:
+    ) -> str | None:
         with self.repo._conn() as conn:
             conn.execute(
                 f"""UPDATE {
                     self.repo._EXERCISE_TABLE
-                } SET text=%s, updated_at=%s where id=%s RETURNING id""",
+                } SET text=%s, updated_at=%s where id=%s RETURNING uuid""",
                 (
                     text,
                     updated_at,
                     exercise_id,
                 ),
             )
-            return conn.fetchone() is not None
+            res = conn.fetchone()
+
+            if res is None:
+                return
+
+            return res[0]
 
     def assign_exercise(self, candidate_uuid: UUID, exercise_uuid: UUID) -> bool:
         with self.repo._conn() as conn:

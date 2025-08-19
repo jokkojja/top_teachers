@@ -21,7 +21,7 @@ class UserController(ABC):
 
 class ExercisesController(ABC):
     @abstractmethod
-    def create_exercise(self, title: str, text: str, author_id: int) -> int | None:
+    def create_exercise(self, title: str, text: str, author_id: int) -> str | None:
         raise NotImplementedError
 
     @abstractmethod
@@ -31,5 +31,5 @@ class ExercisesController(ABC):
     @abstractmethod
     def update_exercise(
         self, exercise_id: int, text: str, updated_at: datetime
-    ) -> bool:
+    ) -> str | None:
         raise NotImplementedError
