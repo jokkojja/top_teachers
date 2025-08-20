@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 
 class UserResponse(BaseModel):
+    id: int
     name: str
     role: Role
 
@@ -12,5 +13,6 @@ class Users(BaseModel):
 
 
 class UserCreate(BaseModel):
+    id: int
     name: str
     role: Role

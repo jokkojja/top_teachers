@@ -2,7 +2,6 @@ import json
 from typing import Self, TypeAlias
 
 from aiokafka import AIOKafkaProducer
-from tenacity import retry, stop_after_attempt, wait_fixed
 
 from kafka.config import KafkaProducerConfig
 
@@ -10,7 +9,6 @@ Event: TypeAlias = dict[str, str]
 
 
 class KafkaProducerService:
-    @retry(stop=stop_after_attempt(10), wait=wait_fixed(5))
     def __init__(self, config: KafkaProducerConfig):
         self._producer = AIOKafkaProducer(
             bootstrap_servers=config.bootstrap,

@@ -10,6 +10,7 @@ from repos.config import PostgreConfig
 from repos.controllers import CandidateController, ExercisesController, UserController
 from repos.models.user import User, Users
 from repos.models.exercise import Exercise
+from repos.models.assigment import Assigment, Assigments
 from repos.repo import Repo
 
 
@@ -118,18 +119,38 @@ class PostgreExercisesController(ExercisesController):
 
             return res[0]
 
-    def assign_exercise(self, candidate_uuid: int, exercise_uuid: int) -> bool:
+    def assign_exercise(self, candidate_uuid: str, exercise_uuid: str) -> bool:
         with self.repo._conn() as conn:
             try:
                 conn.execute(
                     f"""INSERT INTO {self.repo._ASSIGMENTS_TABLE}
                         (candidate_uuid,exercise_uuid) VALUES (%s, %s)""",
-                    (str(candidate_uuid), str(exercise_uuid)),
+                    (candidate_uuid, exercise_uuid),
                 )
             except ForeignKeyViolation:
                 return False
 
             return True
+
+    def get_assigments(self) -> Assigments:
+        with self.repo._conn() as conn:
+            conn.execute(
+                f"""SELECT id, candidate_uuid, exercise_uuid FROM {
+                    self.repo._ASSIGMENTS_TABLE}""",
+            )
+
+            assigments = conn.fetchall()
+
+            return Assigments(
+                assigments=[
+                    Assigment(
+                        id=assigment[0],
+                        candidate_uuid=assigment[1],
+                        exercise_uuid=assigment[2],
+                    )
+                    for assigment in assigments
+                ]
+            )
 
 
 class PostgreUserContoller(UserController):
@@ -144,17 +165,20 @@ class PostgreUserContoller(UserController):
     def get_users(self) -> Users:
         with self.repo._conn() as conn:
             conn.execute(
-                f"""SELECT u.name, r.role from {
+                f"""SELECT u.name, r.role, u.id from {
                     self.repo._USERS_TABLE
                 } as u join roles as r on u.role_id = r.id"""
             )
             users = conn.fetchall()
-            return Users(users=[User(name=user[0], role=user[1]) for user in users])
+            return Users(
+                users=[User(name=user[0], role=user[1], id=user[2])
+                       for user in users]
+            )
 
     def get_user(self, user_id: int) -> User | None:
         with self.repo._conn() as conn:
             conn.execute(
-                f"""SELECT u.name, r.role from {
+                f"""SELECT u.name, r.role, u.id from {
                     self.repo._USERS_TABLE
                 } as u join roles as r on u.role_id = r.id where u.id=%s""",
                 (user_id,),
@@ -162,7 +186,7 @@ class PostgreUserContoller(UserController):
             user = conn.fetchone()
             if user is None:
                 return
-            return User(name=user[0], role=user[1])
+            return User(name=user[0], role=user[1], id=user[2])
 
     def create_user(self, name: str, role: str) -> int:
         with self.repo._conn() as conn:
@@ -195,16 +219,19 @@ class PostgreCandidateController(CandidateController):
         config = PostgreConfig.from_env()
         return cls(config)
 
-    def create_candidate(self, candidate_uuid: str) -> int:
+    def create_candidate(self, candidate_uuid: str, candidate_name: str) -> int:
         with self.repo._conn() as conn:
             insert_query = f"""
-                INSERT INTO {self.repo._CADIDATES_TABLE} (uuid)
-                VALUES (%s)
+                INSERT INTO {self.repo._CADIDATES_TABLE} (uuid, name)
+                VALUES (%s, %s)
                 RETURNING id
             """
             conn.execute(
                 insert_query,
-                (candidate_uuid,),
+                (
+                    candidate_uuid,
+                    candidate_name,
+                ),
             )
             user_id = conn.fetchone()[0]
             return user_id

@@ -27,6 +27,7 @@ class EventType(enum.StrEnum):
 
 async def publish_candidate(
     candidate_uuid: str,
+    candidate_name: str,
     producer: KafkaProducerService,
     event_type: EventType,
 ):
@@ -37,6 +38,7 @@ async def publish_candidate(
         "timestamp": datetime.now(UTC).isoformat(),
         "payload": {
             "candidate_uuid": candidate_uuid,
+            "candidate_name": candidate_name,
         },
     }
     await producer.send(topic, event)
@@ -46,7 +48,8 @@ async def publish_candidate(
 
 @candidate_router.get("/")
 def get_candidates(
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
+    database_controllers: PostgreControllers = Depends(
+        get_database_controllers),
 ) -> Candidates:
     candidates = database_controllers.candidate_controller.get_candidates()
     if len(candidates.candidates) == 0:
@@ -63,9 +66,11 @@ def get_candidates(
 @candidate_router.get("/{candidate_id}")
 def get_candidate(
     candidate_id: int,
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
+    database_controllers: PostgreControllers = Depends(
+        get_database_controllers),
 ) -> CandidateResponse:
-    candidate = database_controllers.candidate_controller.get_candidate(candidate_id)
+    candidate = database_controllers.candidate_controller.get_candidate(
+        candidate_id)
     if candidate is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
     return CandidateResponse(name=candidate.name, email=candidate.email)
@@ -74,7 +79,8 @@ def get_candidate(
 @candidate_router.put("/")
 async def create_candidate(
     candidate: CandidateCreate,
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
+    database_controllers: PostgreControllers = Depends(
+        get_database_controllers),
     producer: KafkaProducerService = Depends(get_kafka_producer),
 ) -> JSONResponse:
     candidate_uuid = database_controllers.candidate_controller.create_candidate(
@@ -86,6 +92,8 @@ async def create_candidate(
             content="Can't create candidate, something went wrong",
         )
 
-    await publish_candidate(candidate_uuid, producer, EventType.CANDIDATE_CREATED)
+    await publish_candidate(
+        candidate_uuid, candidate.name, producer, EventType.CANDIDATE_CREATED
+    )
 
     return JSONResponse(status_code=HTTP_200_OK, content="Candidate was created")

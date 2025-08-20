@@ -29,10 +29,13 @@ async def consume_events(globals: AppGlobals):
 async def handle_hiring_candidate(globals: AppGlobals, event: dict):
     loop = asyncio.get_running_loop()
     candidate_uuid = event["payload"]["candidate_uuid"]
+    candidate_name = event["payload"]["candidate_name"]
     await loop.run_in_executor(
         None,
         globals.postgre_controllers.candidate_controller.create_candidate,
         candidate_uuid,
+        candidate_name,
     )
 
-    logger.info(f"Consumer created candidate {candidate_uuid}")
+    logger.info(f"Consumer created candidate {
+                candidate_uuid} {candidate_name}")

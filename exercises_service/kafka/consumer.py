@@ -1,13 +1,11 @@
 from typing import Self
 
 from aiokafka import AIOKafkaConsumer
-from tenacity import retry, stop_after_attempt, wait_fixed
 
 from kafka.config import KafkaConsumerConfig
 
 
 class KafkaConsumerService:
-    @retry(stop=stop_after_attempt(10), wait=wait_fixed(5))
     def __init__(self, config: KafkaConsumerConfig):
         self._consumer = AIOKafkaConsumer(
             *config.topics,

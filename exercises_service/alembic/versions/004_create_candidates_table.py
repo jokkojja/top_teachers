@@ -22,7 +22,8 @@ def upgrade():
     op.execute("""
         CREATE TABLE candidates (
             id SERIAL PRIMARY KEY,
-            uuid UUID NOT NULL UNIQUE
+            uuid UUID NOT NULL UNIQUE,
+            name VARCHAR(100) NOT NULL
         );
     """)
 

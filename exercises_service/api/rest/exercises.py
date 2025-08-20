@@ -2,6 +2,7 @@ from datetime import datetime, UTC
 import enum
 import uuid
 
+from api.models.assigments import Assigment, AssigmentCreate, Assigments
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, Response
 from loguru import logger
@@ -48,9 +49,11 @@ async def publish_exercise(
 @exercise_router.get("/{exercise_id}")
 def get_exercise(
     exercise_id: int,
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
+    database_controllers: PostgreControllers = Depends(
+        get_database_controllers),
 ) -> ExerciseResponse:
-    exercise = database_controllers.exercises_controller.get_exercise(exercise_id)
+    exercise = database_controllers.exercises_controller.get_exercise(
+        exercise_id)
     if exercise is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
@@ -68,7 +71,8 @@ def get_exercise(
 @exercise_router.put("/")
 async def create_exercise(
     exercise: ExerciseCreate,
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
+    database_controllers: PostgreControllers = Depends(
+        get_database_controllers),
     producer: KafkaProducerService = Depends(get_kafka_producer),
 ) -> JSONResponse:
     # Formal comm. Streaming exercise to hiring service. Topic: data_replication.exercises
@@ -93,7 +97,8 @@ async def create_exercise(
 async def update_exercise(
     exercise_id: int,
     exercise: ExerciseUpdate,
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
+    database_controllers: PostgreControllers = Depends(
+        get_database_controllers),
     producer: KafkaProducerService = Depends(get_kafka_producer),
 ) -> JSONResponse:
     # Formal comm. Streaming exercise to hiring service. Topic: data_replication.exercises
@@ -114,14 +119,35 @@ async def update_exercise(
 
 
 @exercise_router.post("/")
-def assign_exercise(
-    candidate_id: int,
-    exercise_id: int,
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
+def get_assigments(
+    database_controllers: PostgreControllers = Depends(
+        get_database_controllers),
 ):
+    assigments = database_controllers.exercises_controller.get_assigments()
+    if len(assigments.assigments) == 0:
+        return Response(status_code=HTTP_204_NO_CONTENT)
+
+    return Assigments(
+        assigments=[
+            Assigment(
+                id=assigment.id,
+                candidate_uuid=assigment.candidate_uuid,
+                exercise_uuid=assigment.exercise_uuid,
+            )
+            for assigment in assigments
+        ]
+    )
+
+
+@exercise_router.post("/")
+def assign_exercise(
+    assigne_create: AssigmentCreate,
+    database_controllers: PostgreControllers = Depends(
+        get_database_controllers),
+) -> JSONResponse:
     # Func comm. Buisisness event to hiring service. Topic: domain.homework
     is_assigned = database_controllers.exercises_controller.assign_exercise(
-        candidate_id, exercise_id
+        assigne_create.candidate_uuid, assigne_create.exercise_uuid
     )
 
     if not is_assigned:

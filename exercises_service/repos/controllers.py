@@ -7,7 +7,7 @@ from repos.models.user import User, Users
 
 class CandidateController(ABC):
     @abstractmethod
-    def create_candidate(self, candidate_uuid: str) -> int:
+    def create_candidate(self, candidate_uuid: str, candidate_name: str) -> int:
         raise NotImplementedError
 
 
