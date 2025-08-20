@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y \
   gcc \
   libpq-dev \
   python3-dev && \
-  useradd -ms /bin/bash exercises_service && \
+  useradd -ms /bin/bash hiring_service && \
   rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir --upgrade --root-user-action=ignore pip setuptools wheel poetry
@@ -18,14 +18,14 @@ RUN poetry config virtualenvs.create false \
 
 COPY . ./
 
-RUN chown -R exercises_service:exercises_service  /app
+RUN chown -R hiring_service:hiring_service /app
 
-USER exercises_service 
+USER hiring_service
 
 RUN chmod +x ./scripts/run_migrations.sh
 
-# ENTRYPOINT [ "sh", "-c", "./scripts/run_migrations.sh" ]
 # CMD [ "sh", "-c", "./scripts/run_migrations.sh" ]
+# ENTRYPOINT [ "sh", "-c", "./scripts/run_migrations.sh" ]
 
 # ENTRYPOINT ["sh", "-c", "python3 __main__.py"]
 # FIXME: Fix this shit with migrations depends on kafka container

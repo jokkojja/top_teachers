@@ -11,9 +11,9 @@ from app_globals import AppGlobals
 async def handle_api_startup(app: FastAPI):
     globals = await AppGlobals.create()
     app.state.globals = globals
-
     yield
 
+    # fix to process CanceledError correct
     await app.state.globals.shutdown()
 
 

@@ -1,27 +1,13 @@
 from contextlib import contextmanager
-from datetime import datetime
-import hashlib
-import secrets
-import string
 from typing import Final, Iterator, Self
-from uuid import UUID
 
 from psycopg2.extensions import cursor as PsycopgCursor
 from psycopg2.pool import ThreadedConnectionPool
-from psycopg2.errors import ForeignKeyViolation
 
 from repos.config import PostgreConfig
-from repos.controllers import CandidateController
+from repos.controllers import ExerciseController, CandidateController
 from repos.models.candidate import Candidate, Candidates
 from repos.repo import Repo
-
-
-def generate_token(encode_string: str) -> str:
-    salt = "".join(
-        secrets.choice(string.ascii_letters + string.digits) for _ in range(16)
-    )
-    raw = f"{encode_string}{salt}".encode()
-    return hashlib.sha256(raw).hexdigest()
 
 
 class Postgre(Repo):
@@ -69,7 +55,10 @@ class PostgreCandidateController(CandidateController):
 
     def get_candidates(self) -> Candidates:
         with self.repo._conn() as conn:
-            conn.execute(f"SELECT name, email from {self.repo._CANDIDATES_TABLE}")
+            conn.execute(
+                f"""SELECT name, email from {
+                    self.repo._CANDIDATES_TABLE}"""
+            )
             candidates = conn.fetchall()
             return Candidates(
                 candidates=[
@@ -81,7 +70,8 @@ class PostgreCandidateController(CandidateController):
     def get_candidate(self, candidate_id: int) -> Candidate | None:
         with self.repo._conn() as conn:
             conn.execute(
-                f"""SELECT name, email from {self.repo._CANDIDATES_TABLE} where id=%s""",
+                f"""SELECT name, email from {
+                    self.repo._CANDIDATES_TABLE} where id=%s""",
                 (candidate_id,),
             )
             exercise = conn.fetchone()
@@ -113,3 +103,29 @@ class PostgreCandidateController(CandidateController):
                 return
 
             return candidate[0]
+
+
+class PostgreExerciseController(ExerciseController):
+    def __init__(self, config: PostgreConfig) -> None:
+        self.repo = Postgre(config=config)
+
+    @classmethod
+    def from_env(cls) -> Self:
+        config = PostgreConfig.from_env()
+        return cls(config)
+
+    def create_exercise(self, exercise_uuid: str) -> int:
+        with self.repo._conn() as conn:
+            insert_query = f"""
+                INSERT INTO {self.repo._EXERCISE_TABLE} (exercise_uuid)
+                VALUES (%s)
+                RETURNING id
+            """
+            conn.execute(
+                insert_query,
+                (exercise_uuid,),
+            )
+
+            exercise_id = conn.fetchone()[0]
+
+            return exercise_id

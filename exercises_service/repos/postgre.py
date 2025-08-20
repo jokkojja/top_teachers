@@ -1,7 +1,6 @@
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Final, Iterator, Self
-from uuid import UUID
 
 from psycopg2.extensions import cursor as PsycopgCursor
 from psycopg2.pool import ThreadedConnectionPool
@@ -119,11 +118,12 @@ class PostgreExercisesController(ExercisesController):
 
             return res[0]
 
-    def assign_exercise(self, candidate_uuid: UUID, exercise_uuid: UUID) -> bool:
+    def assign_exercise(self, candidate_uuid: int, exercise_uuid: int) -> bool:
         with self.repo._conn() as conn:
             try:
                 conn.execute(
-                    f"""INSERT INTO {self.repo._ASSIGMENTS_TABLE} (candidate_uuid,exercise_uuid) VALUES (%s, %s)""",
+                    f"""INSERT INTO {self.repo._ASSIGMENTS_TABLE}
+                        (candidate_uuid,exercise_uuid) VALUES (%s, %s)""",
                     (str(candidate_uuid), str(exercise_uuid)),
                 )
             except ForeignKeyViolation:

@@ -115,13 +115,13 @@ async def update_exercise(
 
 @exercise_router.post("/")
 def assign_exercise(
-    candidate_uuid: uuid.UUID,
-    exercise_uuid: uuid.UUID,
+    candidate_id: int,
+    exercise_id: int,
     database_controllers: PostgreControllers = Depends(get_database_controllers),
 ):
     # Func comm. Buisisness event to hiring service. Topic: domain.homework
     is_assigned = database_controllers.exercises_controller.assign_exercise(
-        candidate_uuid, exercise_uuid
+        candidate_id, exercise_id
     )
 
     if not is_assigned:

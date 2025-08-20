@@ -14,8 +14,8 @@ async def consume_events(globals: AppGlobals):
                 event = json.loads(message.value)
                 event_type = event.get("event_type")
 
-                if event_type == "CandidateCreated":
-                    await handle_hiring_candidate(globals, event)
+                if event_type == "ExerciseCreated":
+                    await handle_exercise_created_candidate(globals, event)
                 else:
                     logger.error(f"Unknown event type: {event_type}")
             except Exception as e:
@@ -26,13 +26,13 @@ async def consume_events(globals: AppGlobals):
         await consumer.stop()
 
 
-async def handle_hiring_candidate(globals: AppGlobals, event: dict):
+async def handle_exercise_created_candidate(globals: AppGlobals, event: dict):
     loop = asyncio.get_running_loop()
-    candidate_uuid = event["payload"]["candidate_uuid"]
+    exercise_uuid = event["payload"]["exercise_uuid"]
     await loop.run_in_executor(
         None,
-        globals.postgre_controllers.candidate_controller.create_candidate,
-        candidate_uuid,
+        globals.postgre_controllers.exercise_controller.create_exercise,
+        exercise_uuid,
     )
 
-    logger.info(f"Consumer created candidate {candidate_uuid}")
+    logger.info(f"Consumer created exercise {exercise_uuid}")
