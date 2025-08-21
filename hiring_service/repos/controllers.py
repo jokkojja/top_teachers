@@ -5,7 +5,9 @@ from repos.models.candidate import Candidates, Candidate
 
 class ExerciseController(ABC):
     @abstractmethod
-    def create_exercise(self, exercise_uuid: str) -> int:
+    def create_exercise(
+        self, exercise_uuid: str, exercise_title: str, exercise_text: str
+    ) -> int:
         raise NotImplementedError
 
 

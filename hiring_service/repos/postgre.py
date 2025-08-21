@@ -55,10 +55,7 @@ class PostgreCandidateController(CandidateController):
 
     def get_candidates(self) -> Candidates:
         with self.repo._conn() as conn:
-            conn.execute(
-                f"""SELECT name, email from {
-                    self.repo._CANDIDATES_TABLE}"""
-            )
+            conn.execute(f"""SELECT name, email from {self.repo._CANDIDATES_TABLE}""")
             candidates = conn.fetchall()
             return Candidates(
                 candidates=[
@@ -71,7 +68,8 @@ class PostgreCandidateController(CandidateController):
         with self.repo._conn() as conn:
             conn.execute(
                 f"""SELECT name, email from {
-                    self.repo._CANDIDATES_TABLE} where id=%s""",
+                    self.repo._CANDIDATES_TABLE
+                } where id=%s""",
                 (candidate_id,),
             )
             exercise = conn.fetchone()
@@ -114,18 +112,33 @@ class PostgreExerciseController(ExerciseController):
         config = PostgreConfig.from_env()
         return cls(config)
 
-    def create_exercise(self, exercise_uuid: str) -> int:
+    def create_exercise(
+        self, exercise_uuid: str, exercise_title: str, exercise_text: str
+    ) -> int:
         with self.repo._conn() as conn:
             insert_query = f"""
-                INSERT INTO {self.repo._EXERCISE_TABLE} (exercise_uuid)
-                VALUES (%s)
+                INSERT INTO {self.repo._EXERCISE_TABLE} (uuid, title, text)
+                VALUES (%s,%s,%s)
                 RETURNING id
             """
             conn.execute(
                 insert_query,
-                (exercise_uuid,),
+                (exercise_uuid, exercise_title, exercise_text),
             )
 
             exercise_id = conn.fetchone()[0]
 
             return exercise_id
+
+    def update_exercise(self, exercise_uuid: str, exercise_text: str) -> None:
+        with self.repo._conn() as conn:
+            conn.execute(
+                f"""UPDATE {self.repo._EXERCISE_TABLE} SET text=%s, where uuid=%s""",
+                (
+                    exercise_text,
+                    exercise_uuid,
+                ),
+            )
+            conn.fetchone()
+
+            return

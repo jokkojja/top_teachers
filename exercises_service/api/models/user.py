@@ -13,6 +13,5 @@ class Users(BaseModel):
 
 
 class UserCreate(BaseModel):
-    id: int
     name: str
     role: Role

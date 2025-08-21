@@ -28,18 +28,16 @@ class EventType(enum.StrEnum):
 
 
 async def publish_exercise(
-    exercise_uuid: str,
     producer: KafkaProducerService,
     event_type: EventType,
+    payload: dict[str, str],
 ):
     topic = "data_replication.exercises"
     event = {
         "event_id": str(uuid.uuid4()),
         "event_type": event_type,
         "timestamp": datetime.now(UTC).isoformat(),
-        "payload": {
-            "exercise_uuid": exercise_uuid,
-        },
+        "payload": payload,
     }
     await producer.send(topic, event)
 
@@ -49,11 +47,9 @@ async def publish_exercise(
 @exercise_router.get("/{exercise_id}")
 def get_exercise(
     exercise_id: int,
-    database_controllers: PostgreControllers = Depends(
-        get_database_controllers),
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
 ) -> ExerciseResponse:
-    exercise = database_controllers.exercises_controller.get_exercise(
-        exercise_id)
+    exercise = database_controllers.exercises_controller.get_exercise(exercise_id)
     if exercise is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
@@ -71,8 +67,7 @@ def get_exercise(
 @exercise_router.put("/")
 async def create_exercise(
     exercise: ExerciseCreate,
-    database_controllers: PostgreControllers = Depends(
-        get_database_controllers),
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
     producer: KafkaProducerService = Depends(get_kafka_producer),
 ) -> JSONResponse:
     # Formal comm. Streaming exercise to hiring service. Topic: data_replication.exercises
@@ -85,7 +80,14 @@ async def create_exercise(
             content="Author with provided ID does not exist",
         )
 
-    await publish_exercise(exercise_uuid, producer, EventType.EXERCISE_CREATED)
+    payload = {
+        "exercise_uuid": exercise_uuid,
+        "exercise_title": exercise.title,
+        "exercise_text": exercise.text,
+    }
+    await publish_exercise(
+        producer=producer, event_type=EventType.EXERCISE_CREATED, payload=payload
+    )
 
     return JSONResponse(
         status_code=HTTP_201_CREATED,
@@ -97,8 +99,7 @@ async def create_exercise(
 async def update_exercise(
     exercise_id: int,
     exercise: ExerciseUpdate,
-    database_controllers: PostgreControllers = Depends(
-        get_database_controllers),
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
     producer: KafkaProducerService = Depends(get_kafka_producer),
 ) -> JSONResponse:
     # Formal comm. Streaming exercise to hiring service. Topic: data_replication.exercises
@@ -111,7 +112,11 @@ async def update_exercise(
             content="Exercise with provided ID does not exist",
         )
 
-    await publish_exercise(exercise_uuid, producer, EventType.EXERCISE_UPDATED)
+    payload = {"exercise_uuid": exercise_uuid, "exercise_text": exercise.text}
+    await publish_exercise(
+        producer=producer, event_type=EventType.EXERCISE_UPDATED, payload=payload
+    )
+
     return JSONResponse(
         status_code=HTTP_200_OK,
         content=f"Exercise with id {exercise_id} was updated",
@@ -120,8 +125,7 @@ async def update_exercise(
 
 @exercise_router.post("/")
 def get_assigments(
-    database_controllers: PostgreControllers = Depends(
-        get_database_controllers),
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
 ):
     assigments = database_controllers.exercises_controller.get_assigments()
     if len(assigments.assigments) == 0:
@@ -142,8 +146,7 @@ def get_assigments(
 @exercise_router.post("/")
 def assign_exercise(
     assigne_create: AssigmentCreate,
-    database_controllers: PostgreControllers = Depends(
-        get_database_controllers),
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
 ) -> JSONResponse:
     # Func comm. Buisisness event to hiring service. Topic: domain.homework
     is_assigned = database_controllers.exercises_controller.assign_exercise(

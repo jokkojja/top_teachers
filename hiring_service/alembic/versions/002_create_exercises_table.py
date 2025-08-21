@@ -22,7 +22,9 @@ def upgrade() -> None:
     op.execute("""
         CREATE TABLE exercises (
             id SERIAL PRIMARY KEY,
-            uuid UUID NOT NULL UNIQUE
+            uuid UUID NOT NULL UNIQUE,
+            title VARCHAR(100) NOT NULL,
+            text VARCHAR(300) NOT NULL
         );
     """)
 

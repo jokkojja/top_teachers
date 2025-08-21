@@ -37,5 +37,4 @@ async def handle_hiring_candidate(globals: AppGlobals, event: dict):
         candidate_name,
     )
 
-    logger.info(f"Consumer created candidate {
-                candidate_uuid} {candidate_name}")
+    logger.info(f"""Consumer created candidate {candidate_uuid} {candidate_name}""")
