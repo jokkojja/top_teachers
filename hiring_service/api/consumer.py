@@ -1,6 +1,7 @@
 import asyncio
 import json
 
+from api.models.candidate import CandidateResponse
 from loguru import logger
 
 from app_globals import AppGlobals
@@ -17,6 +18,8 @@ async def consume_events(globals: AppGlobals):
                     await handle_exercise_created(globals, event)
                 elif event_type == "ExerciseUpdated":
                     await handle_exercise_updated(globals, event)
+                elif event_type == "ExerciseAssigned":
+                    await handle_exercise_assigned(globals, event)
                 else:
                     logger.error(f"Unknown event type: {event_type}")
             except Exception as e:
@@ -55,3 +58,17 @@ async def handle_exercise_updated(globals: AppGlobals, event: dict):
     )
 
     logger.info(f"Consumer updated exercise {exercise_uuid}")
+
+
+async def handle_exercise_assigned(globals: AppGlobals, event: dict):
+    loop = asyncio.get_running_loop()
+    exercise_uuid = event["payload"]["exercise_uuid"]
+    candidate_uuid = event["payload"]["candidate_uuid"]
+    await loop.run_in_executor(
+        None,
+        globals.postgre_controllers.exercise_controller.assign_exercise,
+        exercise_uuid,
+        candidate_uuid,
+    )
+
+    logger.info(f"Consumer assigned exercise {exercise_uuid} to {candidate_uuid}")

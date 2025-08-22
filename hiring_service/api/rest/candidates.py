@@ -12,7 +12,13 @@ from starlette.status import (
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
 
-from api.models.candidate import CandidateResponse, CandidateCreate, Candidates
+from api.models.candidate import (
+    AssigmentExercise,
+    AssigmentExercises,
+    CandidateResponse,
+    CandidateCreate,
+    Candidates,
+)
 from api.rest.dependencies import get_database_controllers, get_kafka_producer
 from app_globals import PostgreControllers
 from kafka.producer import KafkaProducerService
@@ -48,8 +54,7 @@ async def publish_candidate(
 
 @candidate_router.get("/")
 def get_candidates(
-    database_controllers: PostgreControllers = Depends(
-        get_database_controllers),
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
 ) -> Candidates:
     candidates = database_controllers.candidate_controller.get_candidates()
     if len(candidates.candidates) == 0:
@@ -66,11 +71,9 @@ def get_candidates(
 @candidate_router.get("/{candidate_id}")
 def get_candidate(
     candidate_id: int,
-    database_controllers: PostgreControllers = Depends(
-        get_database_controllers),
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
 ) -> CandidateResponse:
-    candidate = database_controllers.candidate_controller.get_candidate(
-        candidate_id)
+    candidate = database_controllers.candidate_controller.get_candidate(candidate_id)
     if candidate is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
     return CandidateResponse(name=candidate.name, email=candidate.email)
@@ -79,8 +82,7 @@ def get_candidate(
 @candidate_router.put("/")
 async def create_candidate(
     candidate: CandidateCreate,
-    database_controllers: PostgreControllers = Depends(
-        get_database_controllers),
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
     producer: KafkaProducerService = Depends(get_kafka_producer),
 ) -> JSONResponse:
     candidate_uuid = database_controllers.candidate_controller.create_candidate(
@@ -97,3 +99,32 @@ async def create_candidate(
     )
 
     return JSONResponse(status_code=HTTP_200_OK, content="Candidate was created")
+
+
+# TODO: Move it to other module?
+@candidate_router.get("/{candidate_id}/exercises")
+def get_assigment_exercises(
+    candidate_id: int,
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
+) -> AssigmentExercises:
+    assigment = database_controllers.exercise_controller.get_assigment_exercises(
+        candidate_id
+    )
+
+    if assigment is None:
+        return Response(status_code=HTTP_204_NO_CONTENT)
+
+    return AssigmentExercises(
+        candidate=CandidateResponse(
+            name=assigment.candidate.name,
+            email=assigment.candidate.email,
+        ),
+        exercises=[
+            AssigmentExercise(
+                exercise_uuid=ex.exercise_uuid,
+                exercise_title=ex.exercise_title,
+                exercise_text=ex.exercise_text,
+            )
+            for ex in assigment.exercises
+        ],
+    )

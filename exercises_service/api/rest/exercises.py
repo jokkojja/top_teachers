@@ -25,6 +25,7 @@ exercise_router = APIRouter(prefix="/api/v1/exercise")
 class EventType(enum.StrEnum):
     EXERCISE_CREATED = "ExerciseCreated"
     EXERCISE_UPDATED = "ExerciseUpdated"
+    EXERCISE_ASSIGNED = "ExerciseAssigned"
 
 
 async def publish_exercise(
@@ -42,26 +43,6 @@ async def publish_exercise(
     await producer.send(topic, event)
 
     logger.info(f"Send event {event} to kafka topic {topic}")
-
-
-@exercise_router.get("/{exercise_id}")
-def get_exercise(
-    exercise_id: int,
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
-) -> ExerciseResponse:
-    exercise = database_controllers.exercises_controller.get_exercise(exercise_id)
-    if exercise is None:
-        return Response(status_code=HTTP_204_NO_CONTENT)
-
-    return ExerciseResponse(
-        exercise_id=exercise.exercise_id,
-        title=exercise.title,
-        text=exercise.text,
-        author_id=exercise.author_id,
-        uuid=exercise.uuid,
-        created_at=exercise.created_at,
-        updated_at=exercise.updated_at,
-    )
 
 
 @exercise_router.put("/")
@@ -95,6 +76,78 @@ async def create_exercise(
     )
 
 
+@exercise_router.get("/assigments")
+def get_assigments(
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
+) -> Assigments:
+    assigments = database_controllers.exercises_controller.get_assigments()
+    if len(assigments.assigments) == 0:
+        return Response(status_code=HTTP_204_NO_CONTENT)
+
+    return Assigments(
+        assigments=[
+            Assigment(
+                id=assigment.id,
+                candidate_uuid=assigment.candidate_uuid,
+                exercise_uuid=assigment.exercise_uuid,
+            )
+            for assigment in assigments
+        ]
+    )
+
+
+@exercise_router.post("/assign")
+async def assign_exercise(
+    assigne_create: AssigmentCreate,
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
+    producer: KafkaProducerService = Depends(get_kafka_producer),
+) -> JSONResponse:
+    # Func comm. Buisisness event to hiring service. Topic: domain.homework
+    is_assigned = database_controllers.exercises_controller.assign_exercise(
+        assigne_create.candidate_uuid, assigne_create.exercise_uuid
+    )
+
+    if not is_assigned:
+        return JSONResponse(
+            status_code=HTTP_400_BAD_REQUEST,
+            content="Candidate or exercise with such UUID doesnt exist",
+        )
+
+    payload = {
+        "exercise_uuid": assigne_create.exercise_uuid,
+        "candidate_uuid": assigne_create.candidate_uuid,
+    }
+
+    await publish_exercise(
+        producer=producer, event_type=EventType.EXERCISE_ASSIGNED, payload=payload
+    )
+
+    return JSONResponse(
+        status_code=HTTP_200_OK,
+        content=f"Exercise {assigne_create.exercise_uuid} were assigned to candidate {assigne_create.candidate_uuid}",
+    )
+
+
+@exercise_router.get("/{exercise_id}")
+def get_exercise(
+    exercise_id: int,
+    database_controllers: PostgreControllers = Depends(get_database_controllers),
+) -> ExerciseResponse:
+    exercise = database_controllers.exercises_controller.get_exercise(exercise_id)
+    if exercise is None:
+        return Response(status_code=HTTP_204_NO_CONTENT)
+
+    return ExerciseResponse(
+        exercise_id=exercise.exercise_id,
+        title=exercise.title,
+        text=exercise.text,
+        author_id=exercise.author_id,
+        uuid=exercise.uuid,
+        created_at=exercise.created_at,
+        updated_at=exercise.updated_at,
+    )
+
+
 @exercise_router.patch("/{exercise_id}")
 async def update_exercise(
     exercise_id: int,
@@ -120,46 +173,4 @@ async def update_exercise(
     return JSONResponse(
         status_code=HTTP_200_OK,
         content=f"Exercise with id {exercise_id} was updated",
-    )
-
-
-@exercise_router.post("/")
-def get_assigments(
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
-):
-    assigments = database_controllers.exercises_controller.get_assigments()
-    if len(assigments.assigments) == 0:
-        return Response(status_code=HTTP_204_NO_CONTENT)
-
-    return Assigments(
-        assigments=[
-            Assigment(
-                id=assigment.id,
-                candidate_uuid=assigment.candidate_uuid,
-                exercise_uuid=assigment.exercise_uuid,
-            )
-            for assigment in assigments
-        ]
-    )
-
-
-@exercise_router.post("/")
-def assign_exercise(
-    assigne_create: AssigmentCreate,
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
-) -> JSONResponse:
-    # Func comm. Buisisness event to hiring service. Topic: domain.homework
-    is_assigned = database_controllers.exercises_controller.assign_exercise(
-        assigne_create.candidate_uuid, assigne_create.exercise_uuid
-    )
-
-    if not is_assigned:
-        return JSONResponse(
-            status_code=HTTP_400_BAD_REQUEST,
-            content="Candidate or exercise with such UUID doesnt exist",
-        )
-
-    return JSONResponse(
-        status_code=HTTP_200_OK,
-        content="Exercise were assigned to candidate",
     )

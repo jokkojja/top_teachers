@@ -1,12 +1,18 @@
 from contextlib import contextmanager
 from typing import Final, Iterator, Self
 
+from psycopg2.errors import ForeignKeyViolation
 from psycopg2.extensions import cursor as PsycopgCursor
 from psycopg2.pool import ThreadedConnectionPool
 
 from repos.config import PostgreConfig
 from repos.controllers import ExerciseController, CandidateController
-from repos.models.candidate import Candidate, Candidates
+from repos.models.candidate import (
+    Candidate,
+    Candidates,
+    AssigmentExercise,
+    AssigmentExercises,
+)
 from repos.repo import Repo
 
 
@@ -142,3 +148,48 @@ class PostgreExerciseController(ExerciseController):
             conn.fetchone()
 
             return
+
+    def assign_exercise(self, candidate_uuid: str, exercise_uuid: str) -> bool:
+        with self.repo._conn() as conn:
+            try:
+                conn.execute(
+                    f"""INSERT INTO {self.repo._ASSIGMENTS_TABLE}
+                        (candidate_uuid,exercise_uuid) VALUES (%s, %s)""",
+                    (candidate_uuid, exercise_uuid),
+                )
+            except ForeignKeyViolation:
+                return False
+
+            return True
+
+    def get_assigment_exercises(self, candidate_id: int) -> AssigmentExercises | None:
+        # TODO: Fix me
+        with self.repo._conn() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT c.name, c.email, e.uuid, e.title, e.text
+                FROM {self.repo._CANDIDATES_TABLE} c
+                JOIN {self.repo._ASSIGMENTS_TABLE} a ON a.candidate_uuid = c.uuid
+                JOIN {self.repo._EXERCISE_TABLE} e ON e.uuid = a.exercise_uuid
+                WHERE c.id = %s
+                """,
+                (candidate_id,),
+            ).fetchall()
+
+            if rows is None:
+                return
+
+        candidate = Candidate(
+            name=rows[0]["candidate_name"],
+            email=rows[0]["candidate_email"],
+        )
+        exercises = [
+            AssigmentExercise(
+                exercise_uuid=row["exercise_uuid"],
+                exercise_title=row["exercise_title"],
+                exercise_text=row["exercise_text"],
+            )
+            for row in rows
+        ]
+
+        return AssigmentExercises(candidate=candidate, exercises=exercises)

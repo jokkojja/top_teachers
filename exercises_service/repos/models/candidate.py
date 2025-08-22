@@ -4,8 +4,8 @@ from typing import Iterator
 
 @dataclass(frozen=True)
 class Candidate:
+    uuid: str
     name: str
-    email: str
 
 
 @dataclass(frozen=True)

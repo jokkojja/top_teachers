@@ -11,6 +11,7 @@ from repos.controllers import CandidateController, ExercisesController, UserCont
 from repos.models.user import User, Users
 from repos.models.exercise import Exercise
 from repos.models.assigment import Assigment, Assigments
+from repos.models.candidate import Candidates, Candidate
 from repos.repo import Repo
 
 
@@ -18,7 +19,7 @@ class Postgre(Repo):
     _EXERCISE_TABLE: Final[str] = "exercises"
     _ROLES_TABLE: Final[str] = "roles"
     _USERS_TABLE: Final[str] = "users"
-    _CADIDATES_TABLE: Final[str] = "candidates"
+    _CANDIDATES_TABLE: Final[str] = "candidates"
     _ASSIGMENTS_TABLE: Final[str] = "assignments"
 
     def __init__(
@@ -136,7 +137,8 @@ class PostgreExercisesController(ExercisesController):
         with self.repo._conn() as conn:
             conn.execute(
                 f"""SELECT id, candidate_uuid, exercise_uuid FROM {
-                    self.repo._ASSIGMENTS_TABLE}""",
+                    self.repo._ASSIGMENTS_TABLE
+                }""",
             )
 
             assigments = conn.fetchall()
@@ -171,8 +173,7 @@ class PostgreUserContoller(UserController):
             )
             users = conn.fetchall()
             return Users(
-                users=[User(name=user[0], role=user[1], id=user[2])
-                       for user in users]
+                users=[User(name=user[0], role=user[1], id=user[2]) for user in users]
             )
 
     def get_user(self, user_id: int) -> User | None:
@@ -222,7 +223,7 @@ class PostgreCandidateController(CandidateController):
     def create_candidate(self, candidate_uuid: str, candidate_name: str) -> int:
         with self.repo._conn() as conn:
             insert_query = f"""
-                INSERT INTO {self.repo._CADIDATES_TABLE} (uuid, name)
+                INSERT INTO {self.repo._CANDIDATES_TABLE} (uuid, name)
                 VALUES (%s, %s)
                 RETURNING id
             """
@@ -235,3 +236,14 @@ class PostgreCandidateController(CandidateController):
             )
             user_id = conn.fetchone()[0]
             return user_id
+
+    def get_candidates(self) -> Candidates:
+        with self.repo._conn() as conn:
+            conn.execute(f"""SELECT uuid, name from {self.repo._CANDIDATES_TABLE}""")
+            candidates = conn.fetchall()
+            return Candidates(
+                candidates=[
+                    Candidate(uuid=candidate[0], name=candidate[1])
+                    for candidate in candidates
+                ]
+            )
