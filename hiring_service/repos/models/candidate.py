@@ -6,6 +6,7 @@ from typing import Iterator
 class Candidate:
     name: str
     email: str
+    uuid: str
 
 
 @dataclass(frozen=True)

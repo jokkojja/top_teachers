@@ -13,6 +13,7 @@ from repos.models.candidate import (
     AssigmentExercise,
     AssigmentExercises,
 )
+from repos.models.exercises import Exercises, Exercise
 from repos.repo import Repo
 
 
@@ -61,11 +62,13 @@ class PostgreCandidateController(CandidateController):
 
     def get_candidates(self) -> Candidates:
         with self.repo._conn() as conn:
-            conn.execute(f"""SELECT name, email from {self.repo._CANDIDATES_TABLE}""")
+            conn.execute(
+                f"""SELECT name, email, uuid from {self.repo._CANDIDATES_TABLE}"""
+            )
             candidates = conn.fetchall()
             return Candidates(
                 candidates=[
-                    Candidate(name=candidate[0], email=candidate[1])
+                    Candidate(name=candidate[0], email=candidate[1], uuid=candidate[2])
                     for candidate in candidates
                 ]
             )
@@ -73,7 +76,7 @@ class PostgreCandidateController(CandidateController):
     def get_candidate(self, candidate_id: int) -> Candidate | None:
         with self.repo._conn() as conn:
             conn.execute(
-                f"""SELECT name, email from {
+                f"""SELECT name, email, uuid from {
                     self.repo._CANDIDATES_TABLE
                 } where id=%s""",
                 (candidate_id,),
@@ -82,10 +85,7 @@ class PostgreCandidateController(CandidateController):
             if exercise is None:
                 return
 
-            return Candidate(
-                name=exercise[0],
-                email=exercise[1],
-            )
+            return Candidate(name=exercise[0], email=exercise[1], uuid=exercise[2])
 
     def create_candidate(self, name: str, email: str) -> str | None:
         with self.repo._conn() as conn:
@@ -162,34 +162,43 @@ class PostgreExerciseController(ExerciseController):
 
             return True
 
-    def get_assigment_exercises(self, candidate_id: int) -> AssigmentExercises | None:
-        # TODO: Fix me
+    def get_assigment_exercises(self, candidate_id: int) -> AssigmentExercises:
         with self.repo._conn() as conn:
-            rows = conn.execute(
+            conn.execute(
                 f"""
-                SELECT c.name, c.email, e.uuid, e.title, e.text
+                SELECT c.name, c.email, c.uuid as c_uuid, e.uuid as e_uuid, e.title, e.text
                 FROM {self.repo._CANDIDATES_TABLE} c
                 JOIN {self.repo._ASSIGMENTS_TABLE} a ON a.candidate_uuid = c.uuid
                 JOIN {self.repo._EXERCISE_TABLE} e ON e.uuid = a.exercise_uuid
                 WHERE c.id = %s
                 """,
                 (candidate_id,),
-            ).fetchall()
-
-            if rows is None:
-                return
-
-        candidate = Candidate(
-            name=rows[0]["candidate_name"],
-            email=rows[0]["candidate_email"],
-        )
-        exercises = [
-            AssigmentExercise(
-                exercise_uuid=row["exercise_uuid"],
-                exercise_title=row["exercise_title"],
-                exercise_text=row["exercise_text"],
             )
-            for row in rows
-        ]
+            rows = conn.fetchall()
+            # TODO: Fix me at with indexes, index out if range rows[0][0]
+            print(rows)
+            candidate = Candidate(name=rows[0][0], email=rows[0][1], uuid=rows[0][2])
+            exercises = [
+                AssigmentExercise(
+                    exercise_uuid=row[3],
+                    exercise_title=row[4],
+                    exercise_text=row[5],
+                )
+                for row in rows
+            ]
 
-        return AssigmentExercises(candidate=candidate, exercises=exercises)
+            return AssigmentExercises(candidate=candidate, exercises=exercises)
+
+    def get_exercises(self) -> Exercises:
+        with self.repo._conn() as conn:
+            conn.execute(
+                f"""SELECT uuid, title, text from {self.repo._EXERCISE_TABLE}""",
+            )
+            exercises = conn.fetchall()
+
+            return Exercises(
+                exercises=[
+                    Exercise(uuid=exercise[0], title=exercise[1], text=exercise[2])
+                    for exercise in exercises
+                ]
+            )

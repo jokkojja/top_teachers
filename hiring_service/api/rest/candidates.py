@@ -62,21 +62,12 @@ def get_candidates(
 
     return Candidates(
         users=[
-            CandidateResponse(name=candidate.name, email=candidate.email)
+            CandidateResponse(
+                name=candidate.name, email=candidate.email, uuid=candidate.uuid
+            )
             for candidate in candidates
         ]
     )
-
-
-@candidate_router.get("/{candidate_id}")
-def get_candidate(
-    candidate_id: int,
-    database_controllers: PostgreControllers = Depends(get_database_controllers),
-) -> CandidateResponse:
-    candidate = database_controllers.candidate_controller.get_candidate(candidate_id)
-    if candidate is None:
-        return Response(status_code=HTTP_204_NO_CONTENT)
-    return CandidateResponse(name=candidate.name, email=candidate.email)
 
 
 @candidate_router.put("/")
@@ -102,16 +93,16 @@ async def create_candidate(
 
 
 # TODO: Move it to other module?
-@candidate_router.get("/{candidate_id}/exercises")
+@candidate_router.get("/{candidate_id}/assigments")
 def get_assigment_exercises(
     candidate_id: int,
     database_controllers: PostgreControllers = Depends(get_database_controllers),
-) -> AssigmentExercises:
+):
     assigment = database_controllers.exercise_controller.get_assigment_exercises(
         candidate_id
     )
 
-    if assigment is None:
+    if len(assigment.exercises) == 0:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     return AssigmentExercises(

@@ -1,7 +1,6 @@
 import asyncio
 import json
 
-from api.models.candidate import CandidateResponse
 from loguru import logger
 
 from app_globals import AppGlobals
@@ -67,8 +66,8 @@ async def handle_exercise_assigned(globals: AppGlobals, event: dict):
     await loop.run_in_executor(
         None,
         globals.postgre_controllers.exercise_controller.assign_exercise,
-        exercise_uuid,
         candidate_uuid,
+        exercise_uuid,
     )
 
     logger.info(f"Consumer assigned exercise {exercise_uuid} to {candidate_uuid}")

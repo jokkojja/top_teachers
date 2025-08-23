@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class CandidateResponse(BaseModel):
     name: str
     email: str
+    uuid: str
 
 
 class Candidates(BaseModel):
