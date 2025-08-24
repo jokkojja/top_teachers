@@ -63,7 +63,10 @@ def get_candidates(
     return Candidates(
         users=[
             CandidateResponse(
-                name=candidate.name, email=candidate.email, uuid=candidate.uuid
+                name=candidate.name,
+                email=candidate.email,
+                uuid=candidate.uuid,
+                id=candidate.id,
             )
             for candidate in candidates
         ]
@@ -102,13 +105,17 @@ def get_assigment_exercises(
         candidate_id
     )
 
-    if len(assigment.exercises) == 0:
+    # if len(assigment.exercises) == 0:
+    # return Response(status_code=HTTP_204_NO_CONTENT)
+    if assigment is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     return AssigmentExercises(
         candidate=CandidateResponse(
+            id=assigment.candidate.id,
             name=assigment.candidate.name,
             email=assigment.candidate.email,
+            uuid=assigment.candidate.uuid,
         ),
         exercises=[
             AssigmentExercise(

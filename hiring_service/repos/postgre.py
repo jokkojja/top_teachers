@@ -63,12 +63,17 @@ class PostgreCandidateController(CandidateController):
     def get_candidates(self) -> Candidates:
         with self.repo._conn() as conn:
             conn.execute(
-                f"""SELECT name, email, uuid from {self.repo._CANDIDATES_TABLE}"""
+                f"""SELECT name, email, uuid, id from {self.repo._CANDIDATES_TABLE}"""
             )
             candidates = conn.fetchall()
             return Candidates(
                 candidates=[
-                    Candidate(name=candidate[0], email=candidate[1], uuid=candidate[2])
+                    Candidate(
+                        name=candidate[0],
+                        email=candidate[1],
+                        uuid=candidate[2],
+                        id=candidate[3],
+                    )
                     for candidate in candidates
                 ]
             )
@@ -76,16 +81,21 @@ class PostgreCandidateController(CandidateController):
     def get_candidate(self, candidate_id: int) -> Candidate | None:
         with self.repo._conn() as conn:
             conn.execute(
-                f"""SELECT name, email, uuid from {
+                f"""SELECT name, email, uuid, id from {
                     self.repo._CANDIDATES_TABLE
                 } where id=%s""",
                 (candidate_id,),
             )
-            exercise = conn.fetchone()
-            if exercise is None:
+            candidate = conn.fetchone()
+            if candidate is None:
                 return
 
-            return Candidate(name=exercise[0], email=exercise[1], uuid=exercise[2])
+            return Candidate(
+                name=candidate[0],
+                email=candidate[1],
+                uuid=candidate[2],
+                id=candidate[3],
+            )
 
     def create_candidate(self, name: str, email: str) -> str | None:
         with self.repo._conn() as conn:
@@ -162,11 +172,11 @@ class PostgreExerciseController(ExerciseController):
 
             return True
 
-    def get_assigment_exercises(self, candidate_id: int) -> AssigmentExercises:
+    def get_assigment_exercises(self, candidate_id: int) -> AssigmentExercises | None:
         with self.repo._conn() as conn:
             conn.execute(
                 f"""
-                SELECT c.name, c.email, c.uuid as c_uuid, e.uuid as e_uuid, e.title, e.text
+                SELECT c.name, c.email, c.uuid as c_uuid, c.id, e.uuid as e_uuid, e.title, e.text
                 FROM {self.repo._CANDIDATES_TABLE} c
                 JOIN {self.repo._ASSIGMENTS_TABLE} a ON a.candidate_uuid = c.uuid
                 JOIN {self.repo._EXERCISE_TABLE} e ON e.uuid = a.exercise_uuid
@@ -175,14 +185,18 @@ class PostgreExerciseController(ExerciseController):
                 (candidate_id,),
             )
             rows = conn.fetchall()
-            # TODO: Fix me at with indexes, index out if range rows[0][0]
-            print(rows)
-            candidate = Candidate(name=rows[0][0], email=rows[0][1], uuid=rows[0][2])
+
+            if len(rows) == 0:
+                return
+
+            candidate = Candidate(
+                name=rows[0][0], email=rows[0][1], uuid=rows[0][2], id=rows[0][3]
+            )
             exercises = [
                 AssigmentExercise(
-                    exercise_uuid=row[3],
-                    exercise_title=row[4],
-                    exercise_text=row[5],
+                    exercise_uuid=row[4],
+                    exercise_title=row[5],
+                    exercise_text=row[6],
                 )
                 for row in rows
             ]
