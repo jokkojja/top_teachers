@@ -3,6 +3,7 @@ from datetime import datetime
 
 from repos.models.exercise import Exercise
 from repos.models.user import User, Users
+from repos.models.candidate import Candidates
 
 
 class CandidateController(ABC):
@@ -10,10 +11,14 @@ class CandidateController(ABC):
     def create_candidate(self, candidate_uuid: str, candidate_name: str) -> int:
         raise NotImplementedError
 
+    @abstractmethod
+    def get_candidates(self) -> Candidates | None:
+        raise NotImplementedError
+
 
 class UserController(ABC):
     @abstractmethod
-    def get_users(self) -> Users:
+    def get_users(self) -> Users | None:
         raise NotImplementedError
 
     @abstractmethod
@@ -38,4 +43,8 @@ class ExercisesController(ABC):
     def update_exercise(
         self, exercise_id: int, text: str, updated_at: datetime
     ) -> str | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def assign_exercise(self, candidate_uuid: str, exercise_uuid: str) -> bool:
         raise NotImplementedError

@@ -5,7 +5,7 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class Exercise:
-    exercise_id: int
+    id: int
     title: str
     text: str
     author_id: int

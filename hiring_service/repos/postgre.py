@@ -60,12 +60,16 @@ class PostgreCandidateController(CandidateController):
         config = PostgreConfig.from_env()
         return cls(config)
 
-    def get_candidates(self) -> Candidates:
+    def get_candidates(self) -> Candidates | None:
         with self.repo._conn() as conn:
             conn.execute(
                 f"""SELECT name, email, uuid, id from {self.repo._CANDIDATES_TABLE}"""
             )
             candidates = conn.fetchall()
+
+            if len(candidates) == 0:
+                return
+
             return Candidates(
                 candidates=[
                     Candidate(
@@ -203,12 +207,15 @@ class PostgreExerciseController(ExerciseController):
 
             return AssigmentExercises(candidate=candidate, exercises=exercises)
 
-    def get_exercises(self) -> Exercises:
+    def get_exercises(self) -> Exercises | None:
         with self.repo._conn() as conn:
             conn.execute(
                 f"""SELECT uuid, title, text from {self.repo._EXERCISE_TABLE}""",
             )
             exercises = conn.fetchall()
+
+            if len(exercises) == 0:
+                return
 
             return Exercises(
                 exercises=[

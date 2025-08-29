@@ -81,7 +81,7 @@ def get_assigments(
     database_controllers: PostgreControllers = Depends(get_database_controllers),
 ) -> Assigments:
     assigments = database_controllers.exercises_controller.get_assigments()
-    if len(assigments.assigments) == 0:
+    if assigments is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     return Assigments(
@@ -138,7 +138,7 @@ def get_exercise(
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     return ExerciseResponse(
-        exercise_id=exercise.exercise_id,
+        exercise_id=exercise.id,
         title=exercise.title,
         text=exercise.text,
         author_id=exercise.author_id,

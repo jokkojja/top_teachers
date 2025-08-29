@@ -17,7 +17,7 @@ def get_exercises(
     database_controllers: PostgreControllers = Depends(get_database_controllers),
 ) -> Exercises:
     exercises = database_controllers.exercise_controller.get_exercises()
-    if len(exercises.exercises) == 0:
+    if exercises is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     return Exercises(

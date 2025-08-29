@@ -13,7 +13,7 @@ class ExerciseController(ABC):
 
 class CandidateController(ABC):
     @abstractmethod
-    def get_candidates(self) -> Candidates:
+    def get_candidates(self) -> Candidates | None:
         raise NotImplementedError
 
     @abstractmethod

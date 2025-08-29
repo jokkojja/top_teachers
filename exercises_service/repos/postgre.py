@@ -90,7 +90,7 @@ class PostgreExercisesController(ExercisesController):
             if exercise is None:
                 return
             return Exercise(
-                exercise_id=exercise[0],
+                id=exercise[0],
                 title=exercise[1],
                 text=exercise[2],
                 author_id=exercise[3],
@@ -133,7 +133,7 @@ class PostgreExercisesController(ExercisesController):
 
             return True
 
-    def get_assigments(self) -> Assigments:
+    def get_assigments(self) -> Assigments | None:
         with self.repo._conn() as conn:
             conn.execute(
                 f"""SELECT id, candidate_uuid, exercise_uuid FROM {
@@ -142,6 +142,9 @@ class PostgreExercisesController(ExercisesController):
             )
 
             assigments = conn.fetchall()
+
+            if len(assigments) == 0:
+                return
 
             return Assigments(
                 assigments=[
@@ -164,7 +167,7 @@ class PostgreUserContoller(UserController):
         config = PostgreConfig.from_env()
         return cls(config)
 
-    def get_users(self) -> Users:
+    def get_users(self) -> Users | None:
         with self.repo._conn() as conn:
             conn.execute(
                 f"""SELECT u.name, r.role, u.id from {
@@ -172,6 +175,10 @@ class PostgreUserContoller(UserController):
                 } as u join roles as r on u.role_id = r.id"""
             )
             users = conn.fetchall()
+
+            if len(users) == 0:
+                return
+
             return Users(
                 users=[User(name=user[0], role=user[1], id=user[2]) for user in users]
             )
@@ -237,13 +244,19 @@ class PostgreCandidateController(CandidateController):
             user_id = conn.fetchone()[0]
             return user_id
 
-    def get_candidates(self) -> Candidates:
+    def get_candidates(self) -> Candidates | None:
         with self.repo._conn() as conn:
-            conn.execute(f"""SELECT uuid, name from {self.repo._CANDIDATES_TABLE}""")
+            conn.execute(
+                f"""SELECT uuid, name, id from {self.repo._CANDIDATES_TABLE}"""
+            )
             candidates = conn.fetchall()
+
+            if len(candidates) == 0:
+                return
+
             return Candidates(
                 candidates=[
-                    Candidate(uuid=candidate[0], name=candidate[1])
+                    Candidate(uuid=candidate[0], name=candidate[1], id=candidate[2])
                     for candidate in candidates
                 ]
             )

@@ -20,12 +20,12 @@ def get_candidates(
     database_controllers: PostgreControllers = Depends(get_database_controllers),
 ) -> Candidates:
     candidates = database_controllers.candidate_controller.get_candidates()
-    if len(candidates.candidates) == 0:
+    if candidates is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     return Candidates(
         users=[
-            CandidateResponse(uuid=candidate.uuid, name=candidate.name)
+            CandidateResponse(uuid=candidate.uuid, name=candidate.name, id=candidate.id)
             for candidate in candidates
         ]
     )

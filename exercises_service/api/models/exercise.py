@@ -10,7 +10,7 @@ class ExerciseCreate(BaseModel):
 
 
 class ExerciseResponse(BaseModel):
-    exercise_id: int
+    id: int
     title: str
     text: str
     author_id: int

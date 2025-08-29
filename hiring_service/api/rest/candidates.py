@@ -57,7 +57,7 @@ def get_candidates(
     database_controllers: PostgreControllers = Depends(get_database_controllers),
 ) -> Candidates:
     candidates = database_controllers.candidate_controller.get_candidates()
-    if len(candidates.candidates) == 0:
+    if candidates is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     return Candidates(
@@ -105,8 +105,6 @@ def get_assigment_exercises(
         candidate_id
     )
 
-    # if len(assigment.exercises) == 0:
-    # return Response(status_code=HTTP_204_NO_CONTENT)
     if assigment is None:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
